@@ -1,0 +1,110 @@
+version: '3.7'
+services:
+  eureka-server:
+    image: discovery
+    ports:
+      - "8761:8761"
+    networks:
+      - "advocate-client"
+    environment:
+      eureka.instance.hostname: eureka-server
+      eureka.client.serviceUrl.defaultZone: http://eureka-server:8761/eureka/
+
+  mi-oauth:
+    image: oauth
+    container_name: oauth2
+    ports:
+      - "8004:8004"
+    networks:
+      - "advocate-client"
+    depends_on:
+      - eureka-server
+    environment:
+      server.port: 8004
+      eureka.client.serviceUrl.defaultZone: http://eureka-server:8761/eureka/                    
+      
+  api-gateway:
+    image: gateway
+    container_name: gate1
+    ports:
+      - "8002:8002"
+    networks:
+      - "advocate-client"
+    depends_on:
+      - eureka-server
+    links:
+      - eureka-server
+    environment:
+      server.port: 8002
+      eureka.client.serviceUrl.defaultZone: http://eureka-server:8761/eureka/
+  mongo:
+    image: mongo:latest
+    container_name: mymongo
+    ports:
+      - "27017:27017"
+    hostname: mongo
+    volumes:
+      - /mongo_volume:/data/db
+    networks:
+      - advocate-client
+  mi-advocate:                                                                                                          
+    image: advocate
+    ports:
+      - "8082:8082"
+    networks:
+      - "advocate-client"
+    depends_on:
+      - eureka-server
+      - mongo
+    links:
+      - mongo
+    environment:
+      server.port: 8082
+      eureka.client.serviceUrl.defaultZone: http://eureka-server:8761/eureka/
+      spring.data.mongodb.uri: mongodb://mongo:27017/adv
+      #spring.data.mongodb.database: adv
+      #spring.data.mongodb.username: user
+      #spring.data.mongodb.password: user
+  mi-adv-details:
+    image: adv-details
+    ports:
+      - "8010:8010"
+    networks:
+      - "advocate-client"
+    depends_on:
+      - eureka-server
+      - mongo
+    links:
+      - mongo
+    environment:
+      server.port: 8010
+      eureka.client.serviceUrl.defaultZone: http://eureka-server:8761/eureka/
+      spring.data.mongodb.uri: mongodb://mongo:27017/adv_details
+  mi-client_details:
+    image: client
+    ports:
+      - "8083:8083"
+    networks:
+      - "advocate-client"
+    depends_on:
+      - eureka-server
+    environment:
+      server.port: 8083
+      eureka.client.serviceUrl.defaultZone: http://eureka-server:8761/eureka/
+  mi-adv-cli-server:
+    image: adv-client
+    ports:
+      - "8081:8081"
+    networks:
+      - "advocate-client"
+    depends_on:
+      - eureka-server
+    environment:
+      server.port: 8081
+      eureka.client.serviceUrl.defaultZone: http://eureka-server:8761/eureka/
+    
+
+networks:
+  advocate-client:
+    driver: bridge
+   
